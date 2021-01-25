@@ -145,6 +145,17 @@ function checkError() {
   fi
 }
 
+function startSubProcess() {
+  if [ ${CMDS[$3$1]+x} ];then
+    if [ $QUIET -eq 1 ];then
+       ${CMDS[$3$1]} 2>&1 >> "$2"
+    else
+       ${CMDS[$3$1]} 2>&1 | tee -a "$2"
+    fi
+  fi
+  RC[$3$1]=$?
+}
+
 function processPart() {
   local endtime
   local starttime=`date  "+%s"`
@@ -152,13 +163,10 @@ function processPart() {
   printf "\e[1mStarting %s Phase\e[0m\n" "${PARTNAMES[$1]}" >&2
   printf "[%s - %s] Starting %s Phase\n" "$(eval date +%d.%m.%Y)" "$(eval date +%R:%S)" "${PARTNAMES[$1]}" >>$LOGFILE
 
-  if [ $QUIET -eq 1 ];then
-    ${CMDS[$1]} 2>&1 >> "$LOGFILE"
-  else
-    ${CMDS[$1]} 2>&1 | tee -a "$LOGFILE"
-  fi
-  
-  RC[$1]=$?
+  startSubProcess "$1" "$LOGFILE" "PRE"
+  startSubProcess "$1" "$LOGFILE"
+  startSubProcess "$1" "$LOGFILE" "POST"
+
   endtime=`date  "+%s"`
   let TIMES[$1]=endtime-starttime
   printf "[%s - %s] %s Phase Done\n" "$(eval date +%d.%m.%Y)" "$(eval date +%R:%S)" "${PARTNAMES[$1]}" >>$LOGFILE
