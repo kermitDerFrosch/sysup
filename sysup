@@ -1,0 +1,195 @@
+#!/bin/bash
+
+if [[ $EUID -ne 0 ]];then
+    exec sudo "$0" "$@"
+fi
+
+source /etc/sysup/sysup.conf
+
+if [ -f "$LOCKFILE" ]; then
+  echo "Update is running (PID:`cat $LOCKFILE`)"
+  exit 1
+fi
+
+function cleanup() {
+  rm -f "$LOCKFILE" 2>/dev/null
+}
+
+trap cleanup SIGINT EXIT
+echo $$ > "$LOCKFILE"
+
+NOSYNC=0
+NOPORTAGE=0
+NOREBUILD=0
+NOCLEAN=0
+QUIET=0
+
+while [ "$1x" != "x" ];do
+  op=${1:0:2}
+  if [ "x$op" != "x--" ];then
+    echo "wrong parameter: $1"
+    exit 1
+  fi
+  var="${1^^}"
+  var="${var:2}"
+  case "${var}" in
+    NOSYNC|NS)
+      NOSYNC=1
+      ;;
+    QUIET|Q)
+      QUIET=1
+      ;;
+    NOPORTAGE|NP)
+      NOPORTAGE=1
+      ;;
+    NOREBUILD|NR)
+      NOREBUILD=1
+      ;;
+    NOCLEAN|NC)
+      NOCLEAN=1
+      ;;
+    HELP|H)
+      echo "$0 [--noclean] [--nosync] [--noportage] [--norebuild] [--quiet]"
+      exit 0
+      ;;
+    *)
+      echo "wrong parameter: $1"
+      exit 2
+      ;;
+  esac
+  shift
+done
+
+declare -A TIMES
+declare -A RC
+declare -a PARTS
+declare -A CMDS
+declare -A ERROR_MESSAGE
+declare -A PARTNAMES
+
+function printDuration() {
+  local totaltime=0
+  local MAX=0
+  for TIME in ${TIMES[@]};do
+    let totaltime=totaltime+TIME
+  done
+  for NAME in ${PARTNAMES[@]};do
+    if [ $MAX -lt ${#NAME} ];then
+      MAX=${#NAME}
+    fi
+  done
+
+  echo
+  local -A LEN
+  for PART in ${PARTS[@]};do
+    if [[ ${TIMES[$PART]} > 0 ]];then
+      local len
+      local offset
+      local offset2
+      LEN[$PART]=${#PARTNAMES[$PART]}
+      
+      if [ ${LEN[$PART]} -gt 8 ]; then
+        let len=${LEN[$PART]}+2
+      else
+        len=10
+      fi
+
+      let offset=($len-${LEN[$PART]})/2
+      if [ $((${LEN[$PART]}%2)) -eq 0 ];then
+        offset2=$offset
+      else
+        let offset2=offset+1
+      fi
+      printf "\e[4m%${offset}s%s%${offset2}s" " " "${PARTNAMES[$PART]}" " " >&2
+      if [[ "$PART" != "${PARTS[-1]}" ]];then
+        printf "|" >&2
+      fi
+    fi
+  done
+  printf "\e[0m\n" >&2
+  for PART in ${PARTS[@]};do
+    if [[ ${TIMES[$PART]} > 0 ]];then
+      local offset=1
+      local offset2
+      if [ ${LEN[$PART]} > 8 ];then
+        let offset=(${LEN[$PART]}-6)/2
+      fi
+      if [ $((${LEN[$PART]}%2)) -eq 0 ];then
+        offset2=$offset
+      else
+        let offset2=offset+1
+      fi
+    
+      printf "%${offset}s" " " >&2
+      DD=`date -u -d @${TIMES[$PART]} "+%H:%M:%S"`
+      echo -n $DD >&2
+      printf "%${offset2}s" " " >&2
+      if [[ "$PART" != "${PARTS[-1]}" ]];then
+        echo -n "|" >&2
+      fi
+    fi
+  done
+
+  echo -ne "\n\nTotal: \e[1m" >&2
+  date -u -d @$totaltime "+%-Hh %-Mm %-Ss" >&2
+  echo -en "\e[0m"
+}
+
+function checkError() {
+  if [ $1 != 0 ];then
+    printDuration
+    if [[ "x$2" != "x" ]];then
+      echo -e "[\e[1;31mE\e[0m] $2" >&2
+    fi
+    exit $1
+  fi
+}
+
+function processPart() {
+  local endtime
+  local starttime=`date  "+%s"`
+  local LOGFILE="$LOGPATH/${1,,}.log"
+  printf "\e[1mStarting %s Phase\e[0m\n" "${PARTNAMES[$1]}" >&2
+  printf "[%s - %s] Starting %s Phase\n" "$(eval date +%d.%m.%Y)" "$(eval date +%R:%S)" "${PARTNAMES[$1]}" >>$LOGFILE
+
+  if [ $QUIET -eq 1 ];then
+    ${CMDS[$1]} 2>&1 >> "$LOGFILE"
+  else
+    ${CMDS[$1]} 2>&1 | tee -a "$LOGFILE"
+  fi
+  
+  RC[$1]=$?
+  endtime=`date  "+%s"`
+  let TIMES[$1]=endtime-starttime
+  printf "[%s - %s] %s Phase Done\n" "$(eval date +%d.%m.%Y)" "$(eval date +%R:%S)" "${PARTNAMES[$1]}" >>$LOGFILE
+}
+
+if [ $NOSYNC -eq 0 ];then
+  PARTS[${#PARTS[@]}]="SYNC"
+fi
+if [ $NOPORTAGE -eq 0 ];then
+  PARTS[${#PARTS[@]}]="PORTAGE"
+fi
+PARTS[${#PARTS[@]}]="UPDATE"
+if [ $NOREBUILD -eq 0 ];then
+  PARTS[${#PARTS[@]}]="REBUILD"
+fi
+if [ $NOCLEAN -eq 0 ];then
+  PARTS[${#PARTS[@]}]="CLEAN"
+fi
+if [ $QUIET -eq 0 ];then
+  ASK=" -a"
+fi
+
+source /etc/sysup/phase.conf
+
+if [ ! -d "$LOGPATH" ];then
+  mkdir "$LOGPATH"
+fi
+for PART in ${PARTS[@]}; do
+  processPart $PART
+  checkError ${RC[$PART]} ${ERROR_MESSAGE[$PART]}
+done
+
+printDuration
+
