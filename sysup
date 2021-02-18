@@ -4,7 +4,7 @@
 
 [ ! -f /etc/sysup/sysup.conf ] && (echo "Config not found"; exit 1)
 
-source /etc/sysup/sysup.conf
+. /etc/sysup/sysup.conf
 
 if [ -f "$LOCKFILE" ]; then
   echo "Update is running (PID:`cat $LOCKFILE`)"
@@ -189,7 +189,7 @@ if [ $QUIET -eq 0 ];then
   ASK=" -a"
 fi
 
-source /etc/sysup/phase.conf
+. /etc/sysup/phase.conf
 
 if [ ! -d "$LOGPATH" ];then
   mkdir "$LOGPATH"
