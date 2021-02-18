@@ -122,7 +122,7 @@ function printDuration() {
     
       printf "%${offset}s" " " >&2
       DD=`date -u -d @${TIMES[$PART]} "+%H:%M:%S"`
-      echo -n $DD >&2
+      echo -ne "\e[1m$DD\e[0m" >&2
       printf "%${offset2}s" " " >&2
       if [[ "$PART" != "${PARTS[-1]}" ]];then
         echo -n "|" >&2
