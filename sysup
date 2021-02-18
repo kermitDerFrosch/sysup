@@ -1,8 +1,8 @@
 #!/bin/bash
 
-if [[ $EUID -ne 0 ]];then
-    exec sudo "$0" "$@"
-fi
+[ $EUID -ne 0 ] && exec sudo "$0" "$@"
+
+[ ! -f /etc/sysup/sysup.conf ] && (echo "Config not found"; exit 1)
 
 source /etc/sysup/sysup.conf
 
