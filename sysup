@@ -1,22 +1,12 @@
 #!/bin/bash
 
-[ $EUID -ne 0 ] && exec sudo "$0" "$@"
-
 [ ! -f /etc/sysup/sysup.conf ] && (echo "Config not found"; exit 1)
 
 . /etc/sysup/sysup.conf
 
-if [ -f "$LOCKFILE" ]; then
-  echo "Update is running (PID:`cat $LOCKFILE`)"
-  exit 1
-fi
-
 function cleanup() {
   rm -f "$LOCKFILE" 2>/dev/null
 }
-
-trap cleanup SIGINT EXIT
-echo $$ > "$LOCKFILE"
 
 NOSYNC=0
 NOPORTAGE=0
@@ -60,6 +50,16 @@ while [ "$1x" != "x" ];do
   shift
 done
 
+if [ -f "$LOCKFILE" ]; then
+  echo "Update is running (PID:`cat $LOCKFILE`)"
+  exit 1
+fi
+
+[ $EUID -ne 0 ] && exec sudo "$0" "$@"
+
+trap cleanup SIGINT EXIT
+echo $$ > "$LOCKFILE"
+
 declare -A TIMES
 declare -A RC
 declare -a PARTS
@@ -87,7 +87,7 @@ function printDuration() {
       local offset
       local offset2
       LEN[$PART]=${#PARTNAMES[$PART]}
-      
+
       if [ ${LEN[$PART]} -gt 8 ]; then
         let len=${LEN[$PART]}+2
       else
@@ -119,7 +119,7 @@ function printDuration() {
       else
         let offset2=offset+1
       fi
-    
+
       printf "%${offset}s" " " >&2
       DD=`date -u -d @${TIMES[$PART]} "+%H:%M:%S"`
       echo -ne "\e[1m$DD\e[0m" >&2
