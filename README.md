@@ -2,7 +2,7 @@
 
 ### Usage:
 ```
-sysup [-nc] [-ns] [-np] [-nr] [-fp] [-q]
+sysup [-nc] [-ns] [-np] [-nr] [-fp] [-r] [-q]
 
 Options:
     --noclean, -nc     - skip clean phase
@@ -12,6 +12,7 @@ Options:
     --quiet, -q        - hide output
 
     --fixperl, -fp     - fix perl
+    --resume, -r       - resume
 ```
 
 ### Installation:
