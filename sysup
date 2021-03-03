@@ -14,12 +14,18 @@ NOREBUILD=0
 NOCLEAN=0
 QUIET=0
 
+function usage() {
+  echo -e "$0 [-nc] [-ns] [-np] [-nr] [-fp] [-q]\n"
+  echo "Options:"
+  echo "    --noclean, -nc     - skip clean phase"
+  echo "    --nosync, -ns      - skip sync phase"
+  echo "    --noportage, -np   - skip portage update phase"
+  echo "    --norebuild, -nr   - skip rebuild phase"
+  echo "    --quiet, -q        - hide output"
+  exit 0
+}
+
 while [ "$1x" != "x" ];do
-  op=${1:0:2}
-  if [ "x$op" != "x--" ];then
-    echo "wrong parameter: $1"
-    exit 1
-  fi
   var="${1^^}"
   var="${var:2}"
   case "${var}" in
@@ -39,8 +45,7 @@ while [ "$1x" != "x" ];do
       NOCLEAN=1
       ;;
     HELP|H)
-      echo "$0 [--noclean] [--nosync] [--noportage] [--norebuild] [--quiet]"
-      exit 0
+      usage
       ;;
     *)
       echo "wrong parameter: $1"
