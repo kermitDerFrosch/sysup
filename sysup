@@ -228,7 +228,7 @@ fi
 if [ $NOCLEAN -eq 0 ];then
   PARTS[${#PARTS[@]}]="CLEAN"
 fi
-if [ $FIXPERL -eq 0 ];then
+if [ $FIXPERL -eq 1 ];then
   PARTS[${#PARTS[@]}]="FIXPERL"
 fi
 if [ $QUIET -eq 0 ];then
