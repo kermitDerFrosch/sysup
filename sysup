@@ -176,7 +176,7 @@ function checkError() {
   if [ $1 != 0 ];then
     printDuration
     if [[ "x$2" != "x" ]];then
-      echo -e "[\e[1;31mE\e[0m] $2" >&2
+      echo -e "[\e[1;31mE\e[0m] $2 ($1)" >&2
     fi
     exit $1
   fi
