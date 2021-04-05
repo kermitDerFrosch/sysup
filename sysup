@@ -208,6 +208,7 @@ function processPart() {
   endtime=`date  "+%s"`
   let TIMES[$1]=endtime-starttime
   printf "[%s - %s] %s Phase Done\n" "$(eval date +%d.%m.%Y)" "$(eval date +%R:%S)" "${PARTNAMES[$1]}" >>$LOGFILE
+  checkError ${RC[$1]} ${ERROR_MESSAGE[$1]}
 }
 
 if [ $NOSYNC -eq 0 ];then
@@ -242,7 +243,6 @@ if [ ! -d "$LOGPATH" ];then
 fi
 for PART in ${PARTS[@]}; do
   processPart $PART
-  checkError ${RC[$PART]} ${ERROR_MESSAGE[$PART]}
 done
 
 printDuration
