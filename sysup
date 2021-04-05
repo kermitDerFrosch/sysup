@@ -30,7 +30,7 @@ function usage() {
   echo "    --resume, -r       - resume"
   exit 0
 }
-
+PARAMS="$@"
 while [ "$1x" != "x" ];do
   var="${1^^}"
   if [ "x${1:0:2}" != "x--" ];then
@@ -92,9 +92,9 @@ if [ -f "$LOCKFILE" ]; then
   exit 1
 fi
 
-[ $EUID -ne 0 ] && exec sudo "$0" "$@"
+[ $EUID -ne 0 ] && exec sudo "$0" $PARAMS
 
-trap cleanup SIGINT EXIT
+trap cleanup EXIT INT TERM
 echo $$ > "$LOCKFILE"
 
 declare -A TIMES
