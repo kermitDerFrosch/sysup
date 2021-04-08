@@ -6,8 +6,10 @@
 
 function cleanup() {
   rm -f "$LOCKFILE" 2>/dev/null
+  CLEANED=1
 }
 
+CLEANED=0
 NOSYNC=0
 NOPORTAGE=0
 NOREBUILD=0
@@ -183,18 +185,25 @@ function checkError() {
 }
 
 function startSubProcess() {
+  if [ $CLEANED -eq 1 ]; then
+    return
+  fi
   if [ ${CMDS[$3$1]+x} ];then
     if [ $QUIET -eq 1 ];then
       ${CMDS[$3$1]} 2>&1 >> "$2"
-      RC[$3$1]=$?
+      RC[$3$1]=${PIPESTATUS[0]}
     else
       ${CMDS[$3$1]} 2>&1 | tee -ia "$2"
-      RC[$3$1]=$?
+      RC[$3$1]=${PIPESTATUS[0]}
     fi
   fi
 }
 
 function processPart() {
+  if [ $CLEANED -eq 1 ]; then
+    return
+  fi
+
   local endtime
   local starttime=`date  "+%s"`
   local LOGFILE="$LOGPATH/${1,,}.log"
