@@ -207,7 +207,7 @@ function processPart() {
   local endtime
   local starttime=`date  "+%s"`
   local LOGFILE="$LOGPATH/${1,,}.log"
-  printf "\e[1mStarting %s Phase\e[0m\n" "${PARTNAMES[$1]}" >&2
+  printf "\e[1m[%s - %s] Starting %s Phase\e[0m\n" "$(eval date +%d.%m.%Y)" "$(eval date +%R:%S)" "${PARTNAMES[$1]}" >&2
   printf "[%s - %s] Starting %s Phase\n" "$(eval date +%d.%m.%Y)" "$(eval date +%R:%S)" "${PARTNAMES[$1]}" >>$LOGFILE
 
   startSubProcess "$1" "$LOGFILE" "PRE"
