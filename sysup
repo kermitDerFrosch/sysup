@@ -5,7 +5,7 @@
 . /etc/sysup/sysup.conf
 
 function cleanup() {
-  rm -f "$LOCKFILE" 2>/dev/null
+  [ -f $LOCKFILE ] && rm -f "$LOCKFILE"
   CLEANED=1
 }
 
@@ -97,6 +97,7 @@ fi
 [ $EUID -ne 0 ] && exec sudo "$0" $PARAMS
 
 trap cleanup EXIT INT TERM
+
 echo $$ > "$LOCKFILE"
 
 declare -A TIMES
