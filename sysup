@@ -251,9 +251,12 @@ fi
 if [ ! -d "$LOGPATH" ];then
   mkdir "$LOGPATH"
 fi
+
 for PART in ${PARTS[@]}; do
+  if [ $CLEANED -eq 1 ]; then
+    break
+  fi
   processPart $PART
 done
 
 printDuration
-
