@@ -151,10 +151,10 @@ function printDuration() {
     if [[ ${TIMES[$PART]} > 0 ]];then
       local offset=1
       local offset2
-      if [ ${LEN[$PART]} > 8 ];then
+      if [[ ${LEN[$PART]} > 8 ]];then
         let offset=(${LEN[$PART]}-6)/2
       fi
-      if [ $((${LEN[$PART]}%2)) -eq 0 ];then
+      if [[ $((${LEN[$PART]}%2)) -eq 0 ]];then
         offset2=$offset
       else
         let offset2=offset+1
