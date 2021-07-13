@@ -18,14 +18,16 @@ QUIET=0
 NOUPDATE=0
 FIXPERL=0
 RESUME=0
+NOASK=0
 
 function usage() {
-  echo -e "$0 [-nc] [-ns] [-np] [-nr] [-fp] [-r] [-q]\n"
+  echo -e "$0 [-nc] [-ns] [-np] [-nr] [-fp] [-r] [-q] [-na]\n"
   echo "Options:"
   echo "    --noclean, -nc     - skip clean phase"
   echo "    --nosync, -ns      - skip sync phase"
   echo "    --noportage, -np   - skip portage update phase"
   echo "    --norebuild, -nr   - skip rebuild phase"
+  echo "    --noask, -na       - don't ask"
   echo "    --quiet, -q        - hide output"
   echo
   echo "    --fixperl, -fp     - fix perl"
@@ -47,6 +49,9 @@ while [ "$1x" != "x" ];do
   case "${var}" in
     NOSYNC|NS)
       NOSYNC=1
+      ;;
+    NOASK|NA)
+      NOASK=1
       ;;
     QUIET|Q)
       QUIET=1
@@ -242,7 +247,7 @@ fi
 if [ $FIXPERL -eq 1 ];then
   PARTS[${#PARTS[@]}]="FIXPERL"
 fi
-if [ $QUIET -eq 0 ];then
+if [ $QUIET -eq 0 -a $NOASK -eq 0 ];then
   ASK=" -a"
 fi
 

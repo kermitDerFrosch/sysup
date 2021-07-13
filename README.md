@@ -2,13 +2,14 @@
 
 ### Usage:
 ```
-sysup [-nc] [-ns] [-np] [-nr] [-fp] [-r] [-q]
+sysup [-nc] [-ns] [-np] [-nr] [-fp] [-r] [-q] [-na]
 
 Options:
     --noclean, -nc     - skip clean phase
     --nosync, -ns      - skip sync phase
     --noportage, -np   - skip portage update phase
     --norebuild, -nr   - skip rebuild phase
+    --noask, -na       - don't ask
     --quiet, -q        - hide output
 
     --fixperl, -fp     - fix perl
