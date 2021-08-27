@@ -19,6 +19,7 @@ NOUPDATE=0
 FIXPERL=0
 RESUME=0
 NOASK=0
+SKIPFIRST=0
 
 function usage() {
   echo -e "$0 [-nc] [-ns] [-np] [-nr] [-fp] [-r] [-q] [-na]\n"
@@ -32,6 +33,7 @@ function usage() {
   echo
   echo "    --fixperl, -fp     - fix perl"
   echo "    --resume, -r       - resume"
+  echo "    --skipfirst, -sf   - skip first"
   exit 0
 }
 PARAMS="$@"
@@ -85,6 +87,9 @@ while [ "$1x" != "x" ];do
       NOUPDATE=1
       RESUME=1
       break;
+      ;;
+    SKIPFIRST|SF)
+      SKIPFIRST=1
       ;;
     *)
       echo "wrong parameter: $var"
@@ -250,7 +255,9 @@ fi
 if [ $QUIET -eq 0 -a $NOASK -eq 0 ];then
   ASK=" -a"
 fi
-
+if [ $SKIPFIRST -eq 1 ];then
+  RESUME_PARAMS="--skipfirst"
+fi
 . /etc/sysup/phase.conf
 
 if [ ! -d "$LOGPATH" ];then
