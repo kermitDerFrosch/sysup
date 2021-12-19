@@ -1,9 +1,5 @@
 #!/bin/bash
 
-[ ! -f /etc/sysup/sysup.conf ] && (echo "Config not found"; exit 1)
-
-. /etc/sysup/sysup.conf
-
 function cleanup() {
   [ -f $LOCKFILE ] && rm -f "$LOCKFILE"
   CLEANED=1
@@ -20,6 +16,11 @@ FIXPERL=0
 RESUME=0
 NOASK=0
 SKIPFIRST=0
+
+[ ! -f /etc/sysup/sysup.conf ] && (echo "Config not found"; exit 1)
+
+. /etc/sysup/sysup.conf
+
 
 function usage() {
   echo -e "$0 [-nc] [-ns] [-np] [-nr] [-fp] [-r] [-q] [-na]\n"
