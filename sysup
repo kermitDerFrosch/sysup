@@ -265,11 +265,15 @@ if [ ! -d "$LOGPATH" ];then
   mkdir "$LOGPATH"
 fi
 
+[ -f /etc/sysup/pre.sh ] && source /etc/sysup/pre.sh
+
 for PART in ${PARTS[@]}; do
   if [ $CLEANED -eq 1 ]; then
     break
   fi
   processPart $PART
 done
+
+[ -f /etc/sysup/post.sh ] && source /etc/sysup/post.sh
 
 printDuration
