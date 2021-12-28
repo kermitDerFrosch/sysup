@@ -3,6 +3,8 @@
 function cleanup() {
   [ -f $LOCKFILE ] && rm -f "$LOCKFILE"
   CLEANED=1
+  [ -f /etc/sysup/post.sh ] && source /etc/sysup/post.sh
+  printDuration
 }
 
 CLEANED=0
@@ -107,7 +109,7 @@ fi
 
 [ $EUID -ne 0 ] && exec sudo "$0" $PARAMS
 
-trap cleanup EXIT INT TERM
+trap cleanup EXIT
 
 echo $$ > "$LOCKFILE"
 
@@ -188,7 +190,6 @@ function printDuration() {
 
 function checkError() {
   if [ $1 != 0 ];then
-    printDuration
     if [[ "x$2" != "x" ]];then
       echo -e "[\e[1;31mE\e[0m] $2 ($1)" >&2
     fi
@@ -273,7 +274,3 @@ for PART in ${PARTS[@]}; do
   fi
   processPart $PART
 done
-
-[ -f /etc/sysup/post.sh ] && source /etc/sysup/post.sh
-
-printDuration
