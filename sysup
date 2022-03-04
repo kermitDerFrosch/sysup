@@ -7,6 +7,10 @@ function cleanup() {
   [ $START -eq 1 ] && [ -f /etc/sysup/post.sh ] && source /etc/sysup/post.sh
 }
 
+function onSigInt() {
+  START=0
+}
+
 CLEANED=0
 NOSYNC=0
 SYNC=0
@@ -156,6 +160,7 @@ declare -A ERROR_MESSAGE
 declare -A PARTNAMES
 
 trap cleanup EXIT
+trap onSigInt INT
 
 echo $$ > "$LOCKFILE"
 
@@ -237,7 +242,7 @@ function checkError() {
 }
 
 function startSubProcess() {
-  if [ $CLEANED -eq 1 ]; then
+  if [ $CLEANED -eq 1 ] || [ $START -ne 1 ]; then
     return
   fi
   if [ ${CMDS[$3$1]+x} ];then
@@ -252,7 +257,7 @@ function startSubProcess() {
 }
 
 function processPart() {
-  if [ $CLEANED -eq 1 ]; then
+  if [ $CLEANED -eq 1 ] || [ $START -ne 1 ]; then
     return
   fi
 
@@ -309,7 +314,7 @@ START=1
 [ -f /etc/sysup/pre.sh ] && source /etc/sysup/pre.sh
 
 for PART in ${PARTS[@]}; do
-  if [ $CLEANED -eq 1 ]; then
+  if [ $CLEANED -eq 1 ] || [ $START -ne 1 ]; then
     break
   fi
   processPart $PART
