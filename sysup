@@ -140,8 +140,12 @@ if [ -f "$LOCKFILE" ]; then
   exit 1
 fi
 
-SUDO_BIN=$(which sudo)
-[ $EUID -ne 0 ] && exec ${SUDO_BIN:-$(which su) - -c } "$(realpath "$0") $PARAMS"
+if [ $EUID -ne 0 ];then
+  SUDO_BIN=$(which sudo 2>/dev/null)
+  [ -z $SUDO_BIN ] && exec $(which su) - -c "\"$(realpath "$0")\" $PARAMS" || exec ${SUDO_BIN} "$(realpath "$0")" $PARAMS
+  echo "undefined error" >&2
+  exit 1
+fi
 
 declare -i START=0
 declare -A TIMES
