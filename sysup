@@ -90,7 +90,7 @@ while [ "$1x" != "x" ];do
     NOREBUILD|NR)
       NOREBUILD=1
       ;;
-    REBUILD|R)
+    REBUILD|RB)
       REBUILD=1
       ;;
     NOCLEAN|NC)
