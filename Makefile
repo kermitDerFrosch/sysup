@@ -1,3 +1,5 @@
+CONFIG_DIR = /etc/sysup
+
 .PHONY: help install
 .SILENT: help
 
@@ -8,7 +10,8 @@ help:
 
 install:
 	cp sysup /usr/sbin
-	[ -d /etc/sysup ] || mkdir /etc/sysup
-	[ -f /etc/sysup/sysup.conf ] || cp sysup.conf /etc/sysup
-	[ -f /etc/sysup/phase.conf ] || cp phase.conf /etc/sysup
-	[ -f /etc/sysup/post.sh ] || cp post.sh /etc/sysup
+	[ -d $(CONFIG_DIR) ] || mkdir $(CONFIG_DIR)
+	cp functions.inc $(CONFIG_DIR)
+	[ -f $(CONFIG_DIR)/sysup.conf ] || cp sysup.conf $(CONFIG_DIR)
+	[ -f $(CONFIG_DIR)/phase.conf ] || cp phase.conf $(CONFIG_DIR)
+	[ -f $(CONFIG_DIR)/post.sh ] || cp post.sh $(CONFIG_DIR)

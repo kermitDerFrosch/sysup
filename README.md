@@ -1,4 +1,4 @@
-# System Updater v1.0 (for gentoo)
+# System Updater v1.9b (for gentoo)
 
 ### Usage:
 ```
