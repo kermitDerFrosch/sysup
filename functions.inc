@@ -2,12 +2,12 @@ function logLine() {
   local pane=$1
   shift
   if [ ${USE_TMUX} -eq 1 ];then
-    [ $pane -eq 1 ] && [ $FIRSTLOG -eq 1 ] && FIRSTLOG=0 && echo -e "\n\n" >> /tmp/sysup.pane_$pane
+    [ $pane -lt 2 ] && [ ${FIRSTLOG[$pane]} -eq 1 ] && FIRSTLOG[$pane]=0 && echo -e "\n\n" >> /tmp/sysup.pane_$pane
     printf "\n${@/\\n/}" >> /tmp/sysup.pane_$pane
   else
-    printf "$@" >&2
+    printf "${@}" >&2
   fi
-  printf "$@" >> "${LOGFILE}"
+  printf "${@}" >> "${LOGFILE}"
 }
 
 function usage() {
@@ -103,12 +103,13 @@ function printDuration() {
 
 # Check return codes
 function checkError() {
-  if [ $1 != 0 ];then
+  local RC=${1:-0}
+  if [ $RC -ne 0 ];then
     if [[ "x$2" != "x" ]];then
-      echo -e "[\e[1;31mE\e[0m] $2 ($1)" >&2
-      [ ${USE_TMUX} -gt 0 ] && echo -e "[\e[1;31mE\e[0m] $2 ($1)" >> /tmp/sysup.log
+      echo -e "[\e[1;31mE\e[0m] $2 ($RC)" >&2
+      [ ${USE_TMUX} -gt 0 ] && echo -e "[\e[1;31mE\e[0m] $2 ($RC)" >> /tmp/sysup.log
     fi
-    exit $1
+    exit $RC
   fi
 }
 
@@ -142,10 +143,10 @@ function processPart() {
 
   if [ $USE_TMUX -eq 1 ];then
     tmux kill-pane -t1 2>/dev/null
-    tmux split-window -t0 -h "$GETLOG '$1' '$LOGFILE';read -n1 -p'warte'" \; \
-     select-pane -t1 -T "${PARTNAMES[$1]}" \; \
+    tmux split-window -t0 -h "$GETLOG '$1' '$LOGFILE'" \; \
+     select-pane -t1 -T "Partlog" \; \
      resize-pane -t1 -y5 \; \
-     select-pane -t2 -T "Output (${PARTNAMES[$1]})" \; \
+     select-pane -t2 -T "${PARTNAMES[$1]}" \; \
      select-pane -t2
   fi
   startSubProcess "$1" "$LOGFILE" "PRE"
@@ -291,12 +292,15 @@ function startTmux() {
      set -g pane-border-status top \; \
      set -g pane-border-format " --=[ #T ]=-- " \; \
      select-pane -T "Gentoo System updater v$VERSION" \; \
-     split-window "\"$(realpath "$0")\" $PARAMS; rm /tmp/sysup.pane_*; read -n1 -p'Warte auf Tastendruck...' -s;tmux kill-session" \; \
+     split-window "\"$(realpath "$0")\" tmux $PARAMS; rm /tmp/sysup.pane_*; read -n1 -p'Warte auf Tastendruck...' -s;tmux kill-session" \; \
      select-pane -T Output \; \
      split-window -t0 -h "" \; \
-     resize-pane -t0 -y4
+     resize-pane -t0 -y4 \; \
+     select-pane -t2 \; \
+     set -g pane-border-style fg=#91f702 \; \
+     set -g pane-active-border-style fg=#91f702,bold
   fi
-  [ ${#TMUX} -eq 0 ] || USE_TMUX=1
+  [ ${USE_TMUX} -eq 0 ] && QB="--quiet-build=y"
 }
 
 # get root if needed

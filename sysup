@@ -1,9 +1,6 @@
 #!/bin/bash
 declare VERSION="1.9b"
 declare DIR="$(dirname "$(realpath "$0")")"
-declare -A CMDS
-declare -A ERROR_MESSAGE
-declare -A PARTNAMES
 
 function cleanup() {
   [ -f $LOCKFILE ] && rm -f "$LOCKFILE"
@@ -36,7 +33,9 @@ function sourceFile() {
 
 sourceFile "sysup.conf" || _die 1 "Config not found"
 sourceFile "functions.inc" || _die 1 "functions not found"
-sourceFile "phase.conf" || _die 1 "phases not found"
+
+declare -g -i USE_TMUX=0
+[ "x$1" == "xtmux" ] && USE_TMUX=1 && shift
 
 # parse parameters
 PARAMS="$@"
@@ -57,11 +56,10 @@ fi
 # get root if needed
 getRoot
 
-declare -i USE_TMUX=0
-declare -i FIRSTLOG=1
+declare -a FIRSTLOG=(1 1)
 
 # open tmux if needed
-startTmux
+[ $USE_TMUX -eq 0 ] && startTmux
 
 declare -i START=0
 declare -A TIMES
@@ -76,7 +74,7 @@ trap onSigInt INT
 # write lockfile for runcheck
 echo $$ > "$LOCKFILE"
 
-logLine 0 "Gentoo System updater v$VERSION"
+logLine 0 "Gentoo System updater v$VERSION\n"
 
 # add required parts
 configureParts
@@ -87,6 +85,8 @@ fi
 
 START=1
 sourceFile "pre.sh"
+
+sourceFile "phase.conf" || _die 1 "phases not found"
 
 # run parts
 for PART in ${PARTS[@]}; do

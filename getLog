@@ -1,16 +1,43 @@
 #!/bin/bash
 [ $# -eq 2 ] || exit
-# >>> Emerging (1 of 22) sys-devel/autoconf-archive-2022.09.03::gentoo
-# >>> Jobs: 0 of 22 complete, 1 running               Load avg: 0.75, 0.56, 0.57
-# >>> Installing (1 of 22) sys-devel/autoconf-archive-2022.09.03::gentoo
 
-echo "Phaselog: $1"
-tail -n100 -f "$2" | sed -r 's/\x1b\[[0-9]+(;[0-9]+)*m//g' | while read -r a b c d e f g h i j k l m n;do
+declare DIR="$(dirname "$(realpath "$0")")"
+
+function sourceFile() {
+  if [ "x$DIR" == "x/usr/sbin" ];then
+    [ -f "/etc/sysup/$1" ] || return 1
+    . "/etc/sysup/$1"
+  else
+    [ -f "$DIR/$1" ] || return 1
+    . "$DIR/$1"
+  fi
+  return 0
+}
+
+function _die() {
+  RC=$1
+  shift
+  [ ${#1} -eq 0 ] || printf "$@\n"
+  exit $RC;
+}
+
+sourceFile "sysup.conf" || _die 1 "Config not found"
+sourceFile "phase.conf" || _die 1 "phases not found"
+
+echo -e "\n\n\n"
+echo -n "[$(date +"%d.%m.%Y - %H:%M:%S")] Starting ${PARTNAMES[$1]}"
+tail -n100 -f "$2" | sed -ur 's/\x1b\[[0-9]+(;[0-9]+)*m//g' | while read a b c d e f g h i j k l m n;do
   case "${1^^}" in
-    UPDATE)
+    UPDATE|PORTAGE|REBUILD)
+      if ! [ ${PREFIX+x} ];then
+        PREFIX="Search"
+        tmux select-pane -t2 -T "${PARTNAMES[$1]} [$PREFIX]" 2>/dev/null
+      fi
       STEP="${b/:/}"
-      PREFIX="[C] "
-      if [ "x$STEP" == "xJobs" ];then
+      if [ "x$a" == "xTotal:" ];then
+        TOTAL=$b
+        PREFIX="Prechecks"
+      elif [ "x$STEP" == "xJobs" ];then
         DONE=$c
         TOTAL=$e
         if [ "x$h" == "xrunning" ];then
@@ -24,23 +51,46 @@ tail -n100 -f "$2" | sed -r 's/\x1b\[[0-9]+(;[0-9]+)*m//g' | while read -r a b c
           LOAD_15=${j/,/}
           LOAD_30=$k
        fi
+      elif [ "$b $c" == "Unpacking source" ];then
+        PREFIX="Extract"
+      elif [ "$b $c" == "Preparing source" ];then
+        PREFIX="Prepare"
+      elif [ "$b $c" == "Configuring source" ];then
+        PREFIX="Configure"
+      elif [ "$b $c" == "Compiling source" ];then
+        PREFIX="Compile"
       elif [ "x$STEP" == "xEmerging" ] || [ "x$STEP" == "xInstalling" ]; then
-        [ "x$STEP" == "xInstalling" ] && PREFIX="[I] "
+        [ "x$STEP" == "xInstalling" ] && PREFIX="Install" || PREFIX="Unpack"
         CURRENT=${c/\(/}
         TOTAL=${e/\)/}
         PACKET=$f
       else
         continue;
       fi
- #     echo
-  #    echo "  LANG=C printf \"\n%3d (%3d/%3d) %3d running - [%5.2f, %5.2f, %5.2f]\" $CURRENT $DONE $TOTAL $RUNNING $LOAD_5 $LOAD_15 $LOAD_30"
       TIME="$(date +"%d.%m.%Y - %H:%M:%S")"
       if [ ${#LOAD_5} -gt 0 ];then
-        LANG=C printf "\n[%s] (%3s/%3s) - [%5s, %5s, %5s] %s" "$TIME" "${DONE:-${CURRENT}}" "$TOTAL" "$LOAD_5" "$LOAD_15" "$LOAD_30" "$PREFIX $PACKET"
+        LANG=C printf "\n[%s] (%3s/%3s) - [%5s, %5s, %5s] [%-9s] %s" "$TIME" "${DONE:-${CURRENT}}" "$TOTAL" "$LOAD_5" "$LOAD_15" "$LOAD_30" "$PREFIX" "$PACKET"
+      elif [ ${#CURRENT} -gt 0 ];then
+        LANG=C printf "\n[%s] (%3s/%3s) [%-9s] %s" "$TIME" "${DONE:-${CURRENT}}" "$TOTAL" "$PREFIX" "$PACKET"
       else
-        LANG=C printf "\n[%s] (%3s/%3s) %s" "$TIME" "${DONE:-${CURRENT}}" "$TOTAL" "$PREFIX $PACKET"
+        LANG=C printf "\n[%s] %s updates found" "$TIME" "$TOTAL"
+      fi
+      if [ ${DONE:-${CURRENT:-0}} -eq 0 ];then
+        tmux select-pane -t2 -T "${PARTNAMES[$1]} [$PREFIX] Total $TOTAL Updates" 2>/dev/null
+      else
+        tmux select-pane -t2 -T "${PARTNAMES[$1]} [$PREFIX] ${DONE:-${CURRENT}}/$TOTAL $PACKET" 2>/dev/null
       fi
 
+      ;;
+    SYNC)
+      if [ "$b $c" == "Syncing repository" ];then
+        REPO="${d//\'/}"
+      else
+        continue;
+      fi
+      TIME="$(date +"%d.%m.%Y - %H:%M:%S")"
+      LANG=C printf "\n[%s] ${PARTNAMES[$1]} Repository %s" "$TIME" "$REPO"
+      tmux select-pane -t2 -T "${PARTNAMES[$1]} Repository: $REPO" 2>/dev/null
       ;;
     *)
       echo "a: $a b: $b c: $c d: $d e: $e"
