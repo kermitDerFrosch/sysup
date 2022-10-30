@@ -1,14 +1,13 @@
 function logLine() {
-  pane=$1
+  local pane=$1
   shift
-  if [ ${#TMUX} -gt 0 ];then
-    [ $pane -eq 2 ] && [ $FIRSTLOG -eq 1 ] && FIRSTLOG=0 && echo -e "\n\n" >> /tmp/sysup.pane_$pane
+  if [ ${USE_TMUX} -eq 1 ];then
+    [ $pane -eq 1 ] && [ $FIRSTLOG -eq 1 ] && FIRSTLOG=0 && echo -e "\n\n" >> /tmp/sysup.pane_$pane
     printf "\n${@/\\n/}" >> /tmp/sysup.pane_$pane
   else
     printf "$@" >&2
   fi
   printf "$@" >> "${LOGFILE}"
-  unset pane
 }
 
 function usage() {
@@ -25,6 +24,7 @@ function usage() {
   echo "    --resume, -r       - resume"
   echo "    --skipfirst, -sf   - skip first"
   echo
+  echo "    # skip all except given phases"
   echo "    --sync, -s         - sync phase"
   echo "    --portage, -p      - portage update phase"
   echo "    --rebuild, -rb     - rebuild phase"
@@ -137,22 +137,30 @@ function processPart() {
   local endtime
   local starttime=`date  "+%s"`
   local LOGFILE="$LOGPATH/${1,,}_$(eval date +%Y%m%d%H%M%S).log"
-  
-  logLine 2 "\e[1m[%s - %s] Starting %s Phase\e[0m\n" "$(eval date +%d.%m.%Y)" "$(eval date +%R:%S)" "${PARTNAMES[$1]}"
+  > "$LOGFILE"
+  logLine 1 "\e[1m[%s - %s] Starting %s Phase\e[0m\n" "$(eval date +%d.%m.%Y)" "$(eval date +%R:%S)" "${PARTNAMES[$1]}"
 
+  if [ $USE_TMUX -eq 1 ];then
+    tmux kill-pane -t1 2>/dev/null
+    tmux split-window -t0 -h "$GETLOG '$1' '$LOGFILE';read -n1 -p'warte'" \; \
+     select-pane -t1 -T "${PARTNAMES[$1]}" \; \
+     resize-pane -t1 -y5 \; \
+     select-pane -t2 -T "Output (${PARTNAMES[$1]})" \; \
+     select-pane -t2
+  fi
   startSubProcess "$1" "$LOGFILE" "PRE"
   startSubProcess "$1" "$LOGFILE"
   startSubProcess "$1" "$LOGFILE" "POST"
 
   endtime=`date  "+%s"`
   let TIMES[$1]=endtime-starttime
-  logLine 2 "[%s - %s] %s Phase Done\n" "$(eval date +%d.%m.%Y)" "$(eval date +%R:%S)" "${PARTNAMES[$1]}"
+  logLine 1 "[%s - %s] %s Phase Done\n" "$(eval date +%d.%m.%Y)" "$(eval date +%R:%S)" "${PARTNAMES[$1]}"
   checkError ${RC[$1]} ${ERROR_MESSAGE[$1]}
 }
 
 # parse paramter
 function parseParameter() {
-  var="${1^^}"
+  local var="${1^^}"
   if [ "x${1:0:2}" != "x--" ];then
     if [ "x${1:0:1}" != "x-" ];then
       echo "unknown argument: $1"
@@ -229,13 +237,13 @@ function parseParameter() {
 
 # check parameter validity
 function checkParameters() {
-  if [ $(($REBUILD+$UPDATE+$CLEAN+$SYNC+$PORTAGE)) -gt 0 ] && [ $((RESUME+FIXPERL)) -gt 0 ];then
+  if [ $((REBUILD+UPDATE+CLEAN+SYNC+PORTAGE)) -gt 0 ] && [ $((RESUME+FIXPERL)) -gt 0 ];then
     echo -e "\e[33mdon't know what to do :/\e[0m" >&2
     exit 1  
   fi
 
   # disable not needed parts
-  if [ $(($REBUILD+$UPDATE+$CLEAN+$SYNC+$PORTAGE)) -gt 0 ];then
+  if [ $((REBUILD+UPDATE+CLEAN+SYNC+PORTAGE)) -gt 0 ];then
     NOSYNC=1
     NOPORTAGE=1
     NOUPDATE=1
@@ -277,21 +285,24 @@ function configureParts() {
 
 # load tmux panes
 function startTmux() {
-  TMUXBIN=$(which tmux 2>/dev/null)
+  declare -g TMUXBIN=$(which tmux 2>/dev/null)
   if [ ${#TMUX} -eq 0 ] && [ ${#TMUXBIN} -gt 0 ];then
-    USE_TMUX=1
     exec $TMUXBIN new-session -s sysup '[ -f /tmp/sysup.pane_1 ] || > /tmp/sysup.pane_1;tail -n0 -f /tmp/sysup.pane_1' \; \
-     split-window '[ -f /tmp/sysup.pane_2 ] || > /tmp/sysup.pane_2;tail -n0 -f /tmp/sysup.pane_2' \; \
+     set -g pane-border-status top \; \
+     set -g pane-border-format " --=[ #T ]=-- " \; \
+     select-pane -T "Gentoo System updater v$VERSION" \; \
      split-window "\"$(realpath "$0")\" $PARAMS; rm /tmp/sysup.pane_*; read -n1 -p'Warte auf Tastendruck...' -s;tmux kill-session" \; \
-     resize-pane -t0 -y1 \; \
-     resize-pane -t1 -y4
+     select-pane -T Output \; \
+     split-window -t0 -h "" \; \
+     resize-pane -t0 -y4
   fi
+  [ ${#TMUX} -eq 0 ] || USE_TMUX=1
 }
 
 # get root if needed
 function getRoot() {
   if [ $EUID -ne 0 ];then
-    SUDO_BIN=$(which sudo 2>/dev/null)
+    local SUDO_BIN=$(which sudo 2>/dev/null)
     [ -z $SUDO_BIN ] && exec $(which su) - -c "\"$(realpath "$0")\" $PARAMS" || exec ${SUDO_BIN} "$(realpath "$0")" $PARAMS
     echo "undefined error" >&2
     exit 1

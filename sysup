@@ -1,24 +1,42 @@
 #!/bin/bash
-VERSION="1.9b"
+declare VERSION="1.9b"
+declare DIR="$(dirname "$(realpath "$0")")"
+declare -A CMDS
+declare -A ERROR_MESSAGE
+declare -A PARTNAMES
 
 function cleanup() {
   [ -f $LOCKFILE ] && rm -f "$LOCKFILE"
   CLEANED=1
   printDuration
-  [ $START -eq 1 ] && [ -f /etc/sysup/post.sh ] && source /etc/sysup/post.sh
+  [ $START -eq 1 ] && sourceFile "post.sh"
 }
 
 function onSigInt() {
   START=0
 }
 
+function _die() {
+  RC=$1
+  shift
+  [ ${#1} -eq 0 ] || printf "$@\n"
+  exit $RC;
+}
 
-! [ -f /etc/sysup/functions.inc ] && ! [ -f functions.inc ] && (echo "functions not found"; exit 1)
-! [ -f /etc/sysup/sysup.conf ] && ! [ -f sysup.conf ] && (echo "Config not found"; exit 1)
-! [ -f /etc/sysup/phase.conf ] && ! [ -f phase.conf ] && (echo "phases not found"; exit 1)
+function sourceFile() {
+  if [ "x$DIR" == "x/usr/sbin" ];then
+    [ -f "/etc/sysup/$1" ] || return 1
+    . "/etc/sysup/$1"
+  else
+    [ -f "$DIR/$1" ] || return 1
+    . "$DIR/$1"
+  fi
+  return 0
+}
 
-[ -f functions.inc ] && . functions.inc || . /etc/sysup/functions.inc
-[ -f sysup.conf ] && . sysup.conf || . /etc/sysup/sysup.conf
+sourceFile "sysup.conf" || _die 1 "Config not found"
+sourceFile "functions.inc" || _die 1 "functions not found"
+sourceFile "phase.conf" || _die 1 "phases not found"
 
 # parse parameters
 PARAMS="$@"
@@ -49,9 +67,6 @@ declare -i START=0
 declare -A TIMES
 declare -A RC
 declare -a PARTS
-declare -A CMDS
-declare -A ERROR_MESSAGE
-declare -A PARTNAMES
 declare -i CLEANED=0
 
 # define destructor and sigint-handler
@@ -61,19 +76,17 @@ trap onSigInt INT
 # write lockfile for runcheck
 echo $$ > "$LOCKFILE"
 
-logLine 1 "Gentoo System updater v$VERSION"
+logLine 0 "Gentoo System updater v$VERSION"
 
 # add required parts
 configureParts
-
-[ -f phase.conf ] && . phase.conf || . /etc/sysup/phase.conf
 
 if [ ! -d "$LOGPATH" ];then
   mkdir "$LOGPATH"
 fi
 
 START=1
-[ -f /etc/sysup/pre.sh ] && source /etc/sysup/pre.sh
+sourceFile "pre.sh"
 
 # run parts
 for PART in ${PARTS[@]}; do

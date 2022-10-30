@@ -1,0 +1,49 @@
+#!/bin/bash
+[ $# -eq 2 ] || exit
+# >>> Emerging (1 of 22) sys-devel/autoconf-archive-2022.09.03::gentoo
+# >>> Jobs: 0 of 22 complete, 1 running               Load avg: 0.75, 0.56, 0.57
+# >>> Installing (1 of 22) sys-devel/autoconf-archive-2022.09.03::gentoo
+
+echo "Phaselog: $1"
+tail -n100 -f "$2" | sed -r 's/\x1b\[[0-9]+(;[0-9]+)*m//g' | while read -r a b c d e f g h i j k l m n;do
+  case "${1^^}" in
+    UPDATE)
+      STEP="${b/:/}"
+      PREFIX="[C] "
+      if [ "x$STEP" == "xJobs" ];then
+        DONE=$c
+        TOTAL=$e
+        if [ "x$h" == "xrunning" ];then
+          RUNNING=$g
+          LOAD_5=${k/,/}
+          LOAD_15=${l/,/}
+          LOAD_30=$m
+        else
+          RUNNING=0
+          LOAD_5=${i/,/}
+          LOAD_15=${j/,/}
+          LOAD_30=$k
+       fi
+      elif [ "x$STEP" == "xEmerging" ] || [ "x$STEP" == "xInstalling" ]; then
+        [ "x$STEP" == "xInstalling" ] && PREFIX="[I] "
+        CURRENT=${c/\(/}
+        TOTAL=${e/\)/}
+        PACKET=$f
+      else
+        continue;
+      fi
+ #     echo
+  #    echo "  LANG=C printf \"\n%3d (%3d/%3d) %3d running - [%5.2f, %5.2f, %5.2f]\" $CURRENT $DONE $TOTAL $RUNNING $LOAD_5 $LOAD_15 $LOAD_30"
+      TIME="$(date +"%d.%m.%Y - %H:%M:%S")"
+      if [ ${#LOAD_5} -gt 0 ];then
+        LANG=C printf "\n[%s] (%3s/%3s) - [%5s, %5s, %5s] %s" "$TIME" "${DONE:-${CURRENT}}" "$TOTAL" "$LOAD_5" "$LOAD_15" "$LOAD_30" "$PREFIX $PACKET"
+      else
+        LANG=C printf "\n[%s] (%3s/%3s) %s" "$TIME" "${DONE:-${CURRENT}}" "$TOTAL" "$PREFIX $PACKET"
+      fi
+
+      ;;
+    *)
+      echo "a: $a b: $b c: $c d: $d e: $e"
+      ;;
+  esac
+done
